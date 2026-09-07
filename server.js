@@ -1,139 +1,160 @@
-const express = require("express");
-const path = require("path");
+import http from "http";
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
-app.use(express.json());
+const rawKey = process.env.OPENROUTER_API_KEY || "";
+const API_KEY = rawKey.trim().replace(/^Bearer\s+/i, "");
 
-const buildPath = path.join(__dirname, "build");
+const server = http.createServer(async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
 
-app.use(express.static(buildPath));
+  if (req.method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
 
-/* Backend status */
-app.get("/api/status", (req, res) => {
-  res.json({
-    online: true,
-    message: "AI backend is running",
-  });
-});
+  if (req.method !== "POST" || req.url !== "/api/chat") {
+    res.writeHead(404, {
+      "Content-Type": "application/json",
+    });
 
-/* OpenRouter AI */
-app.post("/api/chat", async (req, res) => {
+    res.end(JSON.stringify({
+      error: "Not found",
+    }));
+
+    return;
+  }
+
+  if (!API_KEY) {
+    res.writeHead(500, {
+      "Content-Type": "application/json",
+    });
+
+    res.end(JSON.stringify({
+      error: "OPENROUTER_API_KEY is missing.",
+    }));
+
+    return;
+  }
+
   try {
-    const { message } = req.body;
+    let body = "";
 
-    if (!message || typeof message !== "string") {
-      return res.status(400).json({
-        error: "Message is required.",
-      });
+    for await (const chunk of req) {
+      body += chunk;
     }
 
-    const rawKey = process.env.OPENROUTER_API_KEY;
-
-    if (!rawKey) {
-      console.error("OPENROUTER_API_KEY is missing.");
-
-      return res.status(500).json({
-        error: "OpenRouter API key is not configured.",
-      });
-    }
+    const data = JSON.parse(body || "{}");
 
     /*
-      Render currently contains:
-      
-      Bearer sk-or-...
+      Accept both formats:
 
-      Remove the prefix if it exists, then add
-      exactly one Bearer prefix ourselves.
+      { message: "hello" }
+
+      and
+
+      { messages: [...] }
     */
-    const apiKey = rawKey
-      .trim()
-      .replace(/^Bearer\s+/i, "");
 
-    const response = await fetch(
+    let messages = [];
+
+    if (Array.isArray(data.messages)) {
+      messages = data.messages;
+    } else if (typeof data.message === "string") {
+      messages = [
+        {
+          role: "user",
+          content: data.message,
+        },
+      ];
+    }
+
+    if (messages.length === 0) {
+      res.writeHead(400, {
+        "Content-Type": "application/json",
+      });
+
+      res.end(JSON.stringify({
+        error: "No message was provided.",
+      }));
+
+      return;
+    }
+
+    const openRouterResponse = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
       {
         method: "POST",
 
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
           "Content-Type": "application/json",
-
-          "HTTP-Referer":
-            "https://work-1-kxm6.onrender.com",
-
-          "X-Title": "MY AI Assistant",
+          "Authorization": `Bearer ${API_KEY}`,
+          "X-Title": "AI MIMO",
         },
 
         body: JSON.stringify({
           model: "openrouter/free",
-
           messages: [
             {
               role: "system",
               content:
-                "You are a helpful AI tutor. Explain things clearly and accurately. When discussing programming, provide practical examples and explain errors in beginner-friendly language.",
+                "You are the AI tutor inside AI MIMO. Be helpful, accurate, concise, and explain things clearly. Help the student learn rather than simply giving answers.",
             },
-            {
-              role: "user",
-              content: message,
-            },
+            ...messages,
           ],
         }),
       }
     );
 
-    const data = await response.json();
+    const result = await openRouterResponse.json();
 
-    if (!response.ok) {
-      console.error(
-        "OpenRouter error:",
-        JSON.stringify(data, null, 2)
-      );
+    if (!openRouterResponse.ok) {
+      console.error("OpenRouter error:", result);
 
-      return res.status(response.status).json({
+      res.writeHead(openRouterResponse.status, {
+        "Content-Type": "application/json",
+      });
+
+      res.end(JSON.stringify({
         error:
-          data?.error?.message ||
+          result?.error?.message ||
           "OpenRouter request failed.",
-      });
+      }));
+
+      return;
     }
 
-    const reply =
-      data?.choices?.[0]?.message?.content;
+    const answer =
+      result?.choices?.[0]?.message?.content;
 
-    if (!reply) {
-      console.error(
-        "OpenRouter returned:",
-        JSON.stringify(data, null, 2)
-      );
-
-      return res.status(502).json({
-        error: "OpenRouter returned no response.",
-      });
-    }
-
-    res.json({
-      reply,
+    res.writeHead(200, {
+      "Content-Type": "application/json",
     });
+
+    res.end(JSON.stringify({
+      answer:
+        answer ||
+        "I didn't receive an answer from the AI.",
+    }));
+
   } catch (error) {
-    console.error("AI request error:", error);
+    console.error("Server error:", error);
 
-    res.status(500).json({
-      error: "Server error while contacting AI.",
+    res.writeHead(500, {
+      "Content-Type": "application/json",
     });
+
+    res.end(JSON.stringify({
+      error: "The AI tutor could not process the request.",
+    }));
   }
 });
 
-/* React fallback */
-app.get("*", (req, res) => {
-  res.sendFile(
-    path.join(buildPath, "index.html")
-  );
-});
-
-app.listen(PORT, "0.0.0.0", () => {
+server.listen(PORT, () => {
   console.log(
-    `Server running on port ${PORT}`
+    `AI MIMO backend running on port ${PORT}`
   );
 });
