@@ -225,27 +225,65 @@ function ChatPage() {
     "Solve 2x + 5 = 15",
     "What is a for loop?"
   ];
+  
+  // hi
 
-  const sendMessage = () => {
-    const text = input.trim();
+  const sendMessage = async () => {
+  	const text = input.trim();
 
-    if (!text) return;
+	  if (!text || loading) return;
+
+  const userMessage = {
+    role: "user",
+    content: text,
+  };
+
+  setMessages((old) => [...old, userMessage]);
+  setInput("");
+  setLoading(true);
+
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: text,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data?.error || "The AI request failed.");
+    }
+
+    if (!data?.reply) {
+      throw new Error("The AI returned no response.");
+    }
 
     setMessages((old) => [
       ...old,
       {
-        role: "user",
-        content: text
+        role: "assistant",
+        content: data.reply,
       },
+    ]);
+  } catch (error) {
+    console.error("Chat error:", error);
+
+    setMessages((old) => [
+      ...old,
       {
         role: "assistant",
-        content:
-          "Got it. I can help with that. This is your AI Tutor chat section, ready for your next question."
-      }
+        content: `Sorry, I couldn't reach the AI.\n\n${error.message}`,
+      },
     ]);
-
-    setInput("");
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
   const useSuggestion = (text) => {
     setInput(text);
