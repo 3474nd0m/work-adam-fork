@@ -226,65 +226,72 @@ function ChatPage() {
     "Solve 2x + 5 = 15",
     "What is a for loop?"
   ];
-  
-  // hi
 
   const sendMessage = async () => {
-  	const text = input.trim();
+    const text = input.trim();
 
-	  if (!text || loading) return;
+    if (!text || loading) return;
 
-  const userMessage = {
-    role: "user",
-    content: text,
+    setMessages((old) => [
+      ...old,
+      {
+        role: "user",
+        content: text
+      }
+    ]);
+
+    setInput("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: text
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error || "The AI request failed."
+        );
+      }
+
+      const answer = data?.answer;
+
+      if (!answer) {
+        throw new Error(
+          "The AI returned no answer."
+        );
+      }
+
+      setMessages((old) => [
+        ...old,
+        {
+          role: "assistant",
+          content: answer
+        }
+      ]);
+    } catch (error) {
+      console.error("Chat error:", error);
+
+      setMessages((old) => [
+        ...old,
+        {
+          role: "assistant",
+          content:
+            `Sorry, I couldn't reach the AI.\n\n${error.message}`
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
-
-  setMessages((old) => [...old, userMessage]);
-  setInput("");
-  setLoading(true);
-
-  try {
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        message: text,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data?.error || "The AI request failed.");
-    }
-
-    if (!data?.reply) {
-      throw new Error("The AI returned no response.");
-    }
-
-    setMessages((old) => [
-      ...old,
-      {
-        role: "assistant",
-        content: data.reply,
-      },
-    ]);
-  } catch (error) {
-    console.error("Chat error:", error);
-
-    setMessages((old) => [
-      ...old,
-      {
-        role: "assistant",
-        content: `Sorry, I couldn't reach the AI.\n\n${error.message}`,
-      },
-    ]);
-  } finally {
-    setLoading(false);
-  }
-};
 
   const useSuggestion = (text) => {
     setInput(text);
@@ -316,9 +323,7 @@ function ChatPage() {
             <Icon name="volume" size={19} />
           </button>
 
-          <button
-            className="personality-button"
-          >
+          <button className="personality-button">
             <Icon name="person" size={18} />
             Change Personality
           </button>
@@ -342,58 +347,75 @@ function ChatPage() {
 
       <div className="messages">
         {messages.map((message, index) => (
-          <div
-            key={index}
-            className={
-              message.role === "user"
-                ? "message-row user-row"
-                : "message-row assistant-row"
-            }
-          >
-            {message.role === "assistant" && (
-              <div className="message-avatar">
-                <Wave small />
-              </div>
-            )}
-
+          <React.Fragment key={index}>
             <div
               className={
                 message.role === "user"
-                  ? "user-bubble"
-                  : "assistant-bubble"
+                  ? "message-row user-row"
+                  : "message-row assistant-row"
               }
             >
-              <p>{message.content}</p>
+              {message.role === "assistant" && (
+                <div className="message-avatar">
+                  <Wave small />
+                </div>
+              )}
+
+              <div
+                className={
+                  message.role === "user"
+                    ? "user-bubble"
+                    : "assistant-bubble"
+                }
+              >
+                <p>{message.content}</p>
+
+                <div className="message-meta">
+                  <span>Now</span>
+
+                  {message.role === "user" && (
+                    <span className="checks">
+                      ✓✓
+                    </span>
+                  )}
+                </div>
+
+                {message.role === "assistant" &&
+                  index !== 0 && (
+                    <div className="message-tools">
+                      <button>
+                        <Icon name="copy" size={16} />
+                      </button>
+
+                      <button>
+                        <Icon name="like" size={16} />
+                      </button>
+
+                      <button>
+                        <Icon name="dislike" size={16} />
+                      </button>
+                    </div>
+                  )}
+              </div>
+            </div>
+          </React.Fragment>
+        ))}
+
+        {loading && (
+          <div className="message-row assistant-row">
+            <div className="message-avatar">
+              <Wave small />
+            </div>
+
+            <div className="assistant-bubble">
+              <p>Thinking...</p>
 
               <div className="message-meta">
-                <span>Now</span>
-
-                {message.role === "user" && (
-                  <span className="checks">
-                    ✓✓
-                  </span>
-                )}
+                <span>AI Tutor</span>
               </div>
-
-              {message.role === "assistant" &&
-                index !== 0 && (
-                  <div className="message-tools">
-                    <button>
-                      <Icon name="copy" size={16} />
-                    </button>
-
-                    <button>
-                      <Icon name="like" size={16} />
-                    </button>
-
-                    <button>
-                      <Icon name="dislike" size={16} />
-                    </button>
-                  </div>
-                )}
             </div>
           </div>
-        ))}
+        )}
       </div>
 
       <div className="suggestions">
@@ -401,6 +423,7 @@ function ChatPage() {
           <button
             key={suggestion}
             onClick={() => useSuggestion(suggestion)}
+            disabled={loading}
           >
             {suggestion}
             <span>→</span>
@@ -424,12 +447,18 @@ function ChatPage() {
                 sendMessage();
               }
             }}
-            placeholder="Ask anything..."
+            placeholder={
+              loading
+                ? "AI Tutor is thinking..."
+                : "Ask anything..."
+            }
+            disabled={loading}
           />
 
           <button
             className="mic-button"
             title="Voice input"
+            disabled={loading}
           >
             <Icon name="mic" size={20} />
           </button>
@@ -438,6 +467,7 @@ function ChatPage() {
             className="send-button"
             onClick={sendMessage}
             title="Send"
+            disabled={loading || !input.trim()}
           >
             <Icon name="send" size={21} />
           </button>
