@@ -105,11 +105,7 @@ const Icon = ({ name, size = 22 }) => {
   );
 };
 
-/* Fixed waveform:
-   Heights are calculated as numbers first,
-   then converted to px. This prevents the
-   giant waveform from covering the screen.
-*/
+/* Fixed waveform */
 const Wave = ({ small = false }) => (
   <div className={`wave ${small ? "wave-small" : ""}`}>
     {Array.from({ length: small ? 28 : 55 }).map((_, i) => {
@@ -239,15 +235,93 @@ function HomePanel() {
   );
 }
 
+/* =========================================================
+   AI CHAT
+   ========================================================= */
+
 function ChatPanel() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const sendMessage = () => {
-    if (!input.trim()) return;
+  const sendMessage = async () => {
+    const question = input.trim();
 
-    setMessages((old) => [...old, input.trim()]);
+    if (!question || loading) return;
+
+    /* Immediately show the user's message */
+    setMessages((old) => [
+      ...old,
+      {
+        role: "user",
+        content: question
+      }
+    ]);
+
     setInput("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: question
+        })
+      });
+
+      let data = {};
+
+      try {
+        data = await response.json();
+      } catch {
+        data = {};
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            `API request failed (${response.status})`
+        );
+      }
+
+      const answer =
+        data.answer ||
+        data.reply ||
+        data.message ||
+        data.response;
+
+      if (!answer) {
+        throw new Error(
+          "The AI returned an empty response."
+        );
+      }
+
+      /* Show the AI response */
+      setMessages((old) => [
+        ...old,
+        {
+          role: "assistant",
+          content: answer
+        }
+      ]);
+    } catch (error) {
+      console.error("AI chat error:", error);
+
+      setMessages((old) => [
+        ...old,
+        {
+          role: "assistant",
+          content:
+            error.message ||
+            "I couldn't connect to the AI."
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -258,7 +332,7 @@ function ChatPanel() {
 
           <div className="online">
             <i />
-            Online
+            {loading ? "Thinking..." : "Online"}
           </div>
         </div>
 
@@ -330,31 +404,89 @@ else:
           </div>
         </div>
 
-        {messages.map((message, index) => (
-          <div className="extra-message" key={index}>
-            {message}
+        {messages.map((message, index) => {
+          if (message.role === "user") {
+            return (
+              <div
+                className="user-message"
+                key={index}
+              >
+                {message.content}
+
+                <small>
+                  Just now ✓
+                </small>
+              </div>
+            );
+          }
+
+          return (
+            <div
+              className="assistant-message"
+              key={index}
+            >
+              <div className="assistant-avatar">
+                <Wave small />
+              </div>
+
+              <div className="message-box">
+                <p style={{ whiteSpace: "pre-wrap" }}>
+                  {message.content}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+
+        {loading && (
+          <div className="assistant-message">
+            <div className="assistant-avatar">
+              <Wave small />
+            </div>
+
+            <div className="message-box">
+              <p>
+                Thinking...
+              </p>
+            </div>
           </div>
-        ))}
+        )}
       </div>
 
       <div className="chat-input">
         <input
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          disabled={loading}
+          onChange={(e) =>
+            setInput(e.target.value)
+          }
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
+            if (
+              e.key === "Enter" &&
+              !e.shiftKey
+            ) {
+              e.preventDefault();
               sendMessage();
             }
           }}
-          placeholder="Ask anything..."
+          placeholder={
+            loading
+              ? "AI is thinking..."
+              : "Ask anything..."
+          }
         />
 
-        <button className="mic-button">
+        <button
+          className="mic-button"
+          type="button"
+        >
           <Icon name="mic" size={20} />
         </button>
 
         <button
           className="send-button"
+          type="button"
+          disabled={loading}
           onClick={sendMessage}
         >
           <Icon name="send" size={23} />
