@@ -219,6 +219,7 @@ function ChatPage() {
   ]);
 
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const suggestions = [
     "Explain Python lists",
