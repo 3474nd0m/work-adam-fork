@@ -244,15 +244,18 @@ function ChatPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          message: text
-        })
-      });
+const response = await fetch(
+  "https://work-1-kxm6.onrender.com/api/chat",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message: text
+    })
+  }
+);
 
       const data = await response.json();
 
