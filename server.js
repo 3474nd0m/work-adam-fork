@@ -21,9 +21,11 @@ const server = http.createServer(async (req, res) => {
       "Content-Type": "application/json",
     });
 
-    res.end(JSON.stringify({
-      error: "Not found",
-    }));
+    res.end(
+      JSON.stringify({
+        error: "Not found",
+      })
+    );
 
     return;
   }
@@ -33,9 +35,11 @@ const server = http.createServer(async (req, res) => {
       "Content-Type": "application/json",
     });
 
-    res.end(JSON.stringify({
-      error: "OPENROUTER_API_KEY is missing.",
-    }));
+    res.end(
+      JSON.stringify({
+        error: "OPENROUTER_API_KEY is missing.",
+      })
+    );
 
     return;
   }
@@ -50,36 +54,29 @@ const server = http.createServer(async (req, res) => {
     const data = JSON.parse(body || "{}");
 
     /*
-      Accept both formats:
+      Expect the same request structure used by OpenRouter:
 
-      { message: "hello" }
-
-      and
-
-      { messages: [...] }
+      {
+        "model": "openrouter/free",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Hello!"
+          }
+        ]
+      }
     */
 
-    let messages = [];
-
-    if (Array.isArray(data.messages)) {
-      messages = data.messages;
-    } else if (typeof data.message === "string") {
-      messages = [
-        {
-          role: "user",
-          content: data.message,
-        },
-      ];
-    }
-
-    if (messages.length === 0) {
+    if (!Array.isArray(data.messages) || data.messages.length === 0) {
       res.writeHead(400, {
         "Content-Type": "application/json",
       });
 
-      res.end(JSON.stringify({
-        error: "No message was provided.",
-      }));
+      res.end(
+        JSON.stringify({
+          error: "No messages were provided.",
+        })
+      );
 
       return;
     }
@@ -97,13 +94,15 @@ const server = http.createServer(async (req, res) => {
 
         body: JSON.stringify({
           model: "openrouter/free",
+
           messages: [
             {
               role: "system",
               content:
                 "You are the AI tutor inside AI MIMO. Be helpful, accurate, concise, and explain things clearly. Help the student learn rather than simply giving answers.",
             },
-            ...messages,
+
+            ...data.messages,
           ],
         }),
       }
@@ -118,11 +117,13 @@ const server = http.createServer(async (req, res) => {
         "Content-Type": "application/json",
       });
 
-      res.end(JSON.stringify({
-        error:
-          result?.error?.message ||
-          "OpenRouter request failed.",
-      }));
+      res.end(
+        JSON.stringify({
+          error:
+            result?.error?.message ||
+            "OpenRouter request failed.",
+        })
+      );
 
       return;
     }
@@ -134,12 +135,13 @@ const server = http.createServer(async (req, res) => {
       "Content-Type": "application/json",
     });
 
-    res.end(JSON.stringify({
-      answer:
-        answer ||
-        "I didn't receive an answer from the AI.",
-    }));
-
+    res.end(
+      JSON.stringify({
+        answer:
+          answer ||
+          "I didn't receive an answer from the AI.",
+      })
+    );
   } catch (error) {
     console.error("Server error:", error);
 
@@ -147,9 +149,13 @@ const server = http.createServer(async (req, res) => {
       "Content-Type": "application/json",
     });
 
-    res.end(JSON.stringify({
-      error: "The AI tutor could not process the request.",
-    }));
+    res.end(
+      JSON.stringify({
+        error:
+          error?.message ||
+          "The AI tutor could not process the request.",
+      })
+    );
   }
 });
 
