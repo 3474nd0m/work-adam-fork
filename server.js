@@ -150,12 +150,12 @@ const server = http.createServer(async (req, res) => {
     });
 
     res.end(
-      JSON.stringify({
-        error:
-          error?.message ||
-          "The AI tutor could not process the request.",
-      })
-    );
+  JSON.stringify({
+    error:
+      `${error?.message || "The AI tutor could not process the request."} ` +
+      `(API key starts with: ${API_KEY.slice(0, 8)})`,
+  })
+);
   }
 });
 
