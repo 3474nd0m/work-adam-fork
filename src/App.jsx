@@ -272,11 +272,16 @@ function ChatPage() {
       );
     }
 
-    if (!raw.trim()) {
-      throw new Error(
-        "The server finished with HTTP 200, but returned no response body."
-      );
-    }
+if (!raw.trim()) {
+  // Wait 10 seconds before declaring the response empty.
+  await new Promise((resolve) => setTimeout(resolve, 10000));
+
+  if (!raw.trim()) {
+    throw new Error(
+      "The server finished with HTTP 200, but returned no response body after waiting 10 seconds."
+    );
+  }
+}
 
     let data;
 
