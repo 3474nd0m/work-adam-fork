@@ -11,7 +11,6 @@ function Icon({ name, size = 22 }) {
         <circle cx="15" cy="12" r=".7" />
       </>
     ),
-
     code: (
       <>
         <path d="m8 7-5 5 5 5" />
@@ -19,7 +18,6 @@ function Icon({ name, size = 22 }) {
         <path d="m14 3-4 18" />
       </>
     ),
-
     quiz: (
       <>
         <circle cx="12" cy="12" r="9" />
@@ -27,7 +25,6 @@ function Icon({ name, size = 22 }) {
         <circle cx="12" cy="16.8" r=".7" />
       </>
     ),
-
     history: (
       <>
         <circle cx="12" cy="12" r="9" />
@@ -35,32 +32,27 @@ function Icon({ name, size = 22 }) {
         <path d="M3 8V4h4" />
       </>
     ),
-
     bookmark: (
       <path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-3.5L6 21Z" />
     ),
-
     settings: (
       <>
         <circle cx="12" cy="12" r="3" />
         <path d="M19.4 15a1.8 1.8 0 0 0 .4 2l.1.1-1.7 1.7-.1-.1a1.8 1.8 0 0 0-2-.4 1.8 1.8 0 0 0-1.1 1.7V20h-2.4v-.1a1.8 1.8 0 0 0-1.1-1.7 1.8 1.8 0 0 0-2 .4l-.1.1-1.7-1.7.1-.1a1.8 1.8 0 0 0 .4-2 1.8 1.8 0 0 0-1.7-1.1H4v-2.4h.1a1.8 1.8 0 0 0 1.7-1.1 1.8 1.8 0 0 0-.4-2l-.1-.1L7 6.5l.1.1a1.8 1.8 0 0 0 2 .4 1.8 1.8 0 0 0 1.1-1.7V5h2.4v.3a1.8 1.8 0 0 0 1.1 1.7 1.8 1.8 0 0 0 2-.4l.1-.1 1.7 1.7-.1.1a1.8 1.8 0 0 0-.4 2 1.8 1.8 0 0 0 1.7 1.1h.3v2.4h-.3a1.8 1.8 0 0 0-1.3 1.2Z" />
       </>
     ),
-
     person: (
       <>
         <circle cx="12" cy="8" r="3.5" />
         <path d="M5 20c.7-3.5 3-5.5 7-5.5s6.3 2 7 5.5" />
       </>
     ),
-
     send: (
       <>
         <path d="m4 4 17 8-17 8 3-8Z" />
         <path d="M7 12h14" />
       </>
     ),
-
     mic: (
       <>
         <rect x="9" y="3" width="6" height="11" rx="3" />
@@ -68,14 +60,12 @@ function Icon({ name, size = 22 }) {
         <path d="M12 17v4M8 21h8" />
       </>
     ),
-
     plus: (
       <>
         <path d="M12 5v14" />
         <path d="M5 12h14" />
       </>
     ),
-
     volume: (
       <>
         <path d="M4 10v4h4l5 4V6l-5 4Z" />
@@ -83,7 +73,6 @@ function Icon({ name, size = 22 }) {
         <path d="M18.5 6.5a8 8 0 0 1 0 11" />
       </>
     ),
-
     more: (
       <>
         <circle cx="5" cy="12" r="1" />
@@ -91,24 +80,19 @@ function Icon({ name, size = 22 }) {
         <circle cx="19" cy="12" r="1" />
       </>
     ),
-
     copy: (
       <>
         <rect x="8" y="8" width="11" height="12" rx="2" />
         <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2" />
       </>
     ),
-
     like: (
       <path d="M7 10v10H4V10Zm3 10h6.7a2 2 0 0 0 1.9-1.4l1.3-4.1A2 2 0 0 0 18 12h-4l.6-4.1A2.4 2.4 0 0 0 12.2 5L10 10v10Z" />
     ),
-
     dislike: (
       <path d="M7 14V4H4v10Zm3-10h6.7a2 2 0 0 1 1.9 1.4l1.3 4.1A2 2 0 0 1 18 12h-4l.6 4.1a2.4 2.4 0 0 1-2.4 2.9L10 14v-10Z" />
     ),
-
     check: <path d="m5 12 4 4L19 6" />,
-
     lightbulb: (
       <>
         <path d="M9 18h6M10 21h4" />
@@ -227,86 +211,98 @@ function ChatPage() {
     "What is a for loop?"
   ];
 
-const sendMessage = async () => {
-  const text = input.trim();
+  const sendMessage = async () => {
+    const text = input.trim();
 
-  if (!text || loading) return;
+    if (!text || loading) return;
 
-  setMessages((old) => [
-    ...old,
-    {
-      role: "user",
-      content: text
-    }
-  ]);
-
-  setInput("");
-  setLoading(true);
-
-  try {
-    const response = await fetch(
-      "https://work-1-kxm6.onrender.com/api/chat",
+    setMessages((old) => [
+      ...old,
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          message: text
-        })
+        role: "user",
+        content: text
       }
-    );
+    ]);
 
-    const raw = await response.text();
-
-    let data;
+    setInput("");
+    setLoading(true);
 
     try {
-      data = JSON.parse(raw);
-    } catch {
-      throw new Error(
-        `Server returned non-JSON (${response.status}): ${raw}`
+      const response = await fetch(
+        "https://work-1-kxm6.onrender.com/api/chat",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            message: text
+          })
+        }
       );
-    }
 
-    if (!response.ok) {
-      throw new Error(
-        `HTTP ${response.status}: ${
-          data?.error || "Request failed"
-        }`
-      );
-    }
+      const raw = await response.text();
 
-    const answer = data?.answer;
+      let data = null;
 
-    if (!answer) {
-      throw new Error("The AI returned no answer.");
-    }
-
-    setMessages((old) => [
-      ...old,
-      {
-        role: "assistant",
-        content: answer
+      if (raw.trim()) {
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          throw new Error(
+            `Server returned invalid JSON (${response.status}): ${raw}`
+          );
+        }
       }
-    ]);
-  } catch (error) {
-    console.error("Chat error:", error);
 
-    setMessages((old) => [
-      ...old,
-      {
-        role: "assistant",
-        content:
-          `Sorry, I couldn't reach the AI.\n\n` +
-          `ERROR: ${error?.name || "Unknown"}\n` +
-          `MESSAGE: ${error?.message || "No error message"}`
+      if (!response.ok) {
+        throw new Error(
+          `HTTP ${response.status}: ${
+            data?.error || raw || "Request failed"
+          }`
+        );
       }
-    ]);
-  } finally {
-    setLoading(false);
-  }
-};
+
+      if (!raw.trim()) {
+        throw new Error(
+          `Server returned an empty response (HTTP ${response.status}).`
+        );
+      }
+
+      const answer = data?.answer;
+
+      if (!answer) {
+        throw new Error(
+          "The server returned JSON, but no AI answer was included."
+        );
+      }
+
+      setMessages((old) => [
+        ...old,
+        {
+          role: "assistant",
+          content: answer
+        }
+      ]);
+    } catch (error) {
+      console.error("Chat error:", error);
+
+      setMessages((old) => [
+        ...old,
+        {
+          role: "assistant",
+          content:
+            `Sorry, I couldn't reach the AI.\n\n` +
+            `ERROR: ${error?.name || "Unknown"}\n` +
+            `MESSAGE: ${
+              error?.message || "No error message"
+            }`
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const useSuggestion = (text) => {
     setInput(text);
