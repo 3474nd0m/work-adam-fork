@@ -244,63 +244,67 @@ function ChatPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "https://work-1-kxm6.onrender.com/api/chat",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            model: "openrouter/free",
-            messages: [
-              {
-                role: "user",
-                content: text
-              }
-            ]
-          })
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data?.error || "The AI request failed."
-        );
-      }
-
-      const answer = data?.answer;
-
-      if (!answer) {
-        throw new Error(
-          "The AI returned no answer."
-        );
-      }
-
-      setMessages((old) => [
-        ...old,
-        {
-          role: "assistant",
-          content: answer
-        }
-      ]);
-    } catch (error) {
-      console.error("Chat error:", error);
-
-      setMessages((old) => [
-        ...old,
-        {
-          role: "assistant",
-          content:
-            `Sorry, I couldn't reach the AI.\n\n${error.message}`
-        }
-      ]);
-    } finally {
-      setLoading(false);
+    try {
+  const response = await fetch(
+    "https://work-1-kxm6.onrender.com/api/chat",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: text
+      })
     }
-  };
+  );
+
+  const raw = await response.text();
+
+  let data;
+
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new Error(
+      `Server returned non-JSON (${response.status}): ${raw}`
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `HTTP ${response.status}: ${data?.error || "Request failed"}`
+    );
+  }
+
+  const answer = data?.answer;
+
+  if (!answer) {
+    throw new Error("The AI returned no answer.");
+  }
+
+  setMessages((old) => [
+    ...old,
+    {
+      role: "assistant",
+      content: answer
+    }
+  ]);
+} catch (error) {
+  console.error("Chat error:", error);
+
+  setMessages((old) => [
+    ...old,
+    {
+      role: "assistant",
+      content:
+        `Sorry, I couldn't reach the AI.\n\n` +
+        `ERROR: ${error?.name || "Unknown"}\n` +
+        `MESSAGE: ${error?.message || "No error message"}`
+    }
+  ]);
+} finally {
+  setLoading(false);
+};
 
   const useSuggestion = (text) => {
     setInput(text);
