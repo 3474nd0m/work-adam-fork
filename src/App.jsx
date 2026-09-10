@@ -212,97 +212,124 @@ function ChatPage() {
   ];
 
   const sendMessage = async () => {
-    const text = input.trim();
+  const text = input.trim();
 
-    if (!text || loading) return;
+  if (!text || loading) return;
+
+  setMessages((old) => [
+    ...old,
+    {
+      role: "user",
+      content: text
+    }
+  ]);
+
+  setInput("");
+  setLoading(true);
+
+  const controller = new AbortController();
+
+  // Give OpenRouter/Render plenty of time to respond.
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, 90000);
+
+  try {
+    const response = await fetch(
+      "https://work-1-kxm6.onrender.com/api/chat",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "user",
+              content: text
+            }
+          ]
+        }),
+        signal: controller.signal
+      }
+    );
+
+    const raw = await response.text();
+
+    if (!response.ok) {
+      let data = null;
+
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        // Server returned something other than JSON.
+      }
+
+      throw new Error(
+        `HTTP ${response.status}: ${
+          data?.error || raw || "Request failed"
+        }`
+      );
+    }
+
+    if (!raw.trim()) {
+      throw new Error(
+        "The server finished with HTTP 200, but returned no response body."
+      );
+    }
+
+    let data;
+
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      throw new Error(
+        `Server returned invalid JSON: ${raw}`
+      );
+    }
+
+    if (!data?.answer) {
+      throw new Error(
+        "The server returned JSON, but there was no AI answer."
+      );
+    }
 
     setMessages((old) => [
       ...old,
       {
-        role: "user",
-        content: text
+        role: "assistant",
+        content: data.answer
       }
     ]);
+  } catch (error) {
+    console.error("Chat error:", error);
 
-    setInput("");
-    setLoading(true);
+    let message;
 
-    try {
-      const response = await fetch(
-        "https://work-1-kxm6.onrender.com/api/chat",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            message: text
-          })
-        }
-      );
-
-      const raw = await response.text();
-
-      let data = null;
-
-      if (raw.trim()) {
-        try {
-          data = JSON.parse(raw);
-        } catch {
-          throw new Error(
-            `Server returned invalid JSON (${response.status}): ${raw}`
-          );
-        }
-      }
-
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status}: ${
-            data?.error || raw || "Request failed"
-          }`
-        );
-      }
-
-      if (!raw.trim()) {
-        throw new Error(
-          `Server returned an empty response (HTTP ${response.status}).`
-        );
-      }
-
-      const answer = data?.answer;
-
-      if (!answer) {
-        throw new Error(
-          "The server returned JSON, but no AI answer was included."
-        );
-      }
-
-      setMessages((old) => [
-        ...old,
-        {
-          role: "assistant",
-          content: answer
-        }
-      ]);
-    } catch (error) {
-      console.error("Chat error:", error);
-
-      setMessages((old) => [
-        ...old,
-        {
-          role: "assistant",
-          content:
-            `Sorry, I couldn't reach the AI.\n\n` +
-            `ERROR: ${error?.name || "Unknown"}\n` +
-            `MESSAGE: ${
-              error?.message || "No error message"
-            }`
-        }
-      ]);
-    } finally {
-      setLoading(false);
+    if (error?.name === "AbortError") {
+      message =
+        "The AI took longer than 90 seconds to respond. Please try again.";
+    } else {
+      message =
+        `Sorry, I couldn't reach the AI.\n\n` +
+        `ERROR: ${error?.name || "Unknown"}\n` +
+        `MESSAGE: ${
+          error?.message || "No error message"
+        }`;
     }
-  };
+
+    setMessages((old) => [
+      ...old,
+      {
+        role: "assistant",
+        content: message
+      }
+    ]);
+  } finally {
+    clearTimeout(timeout);
+    setLoading(false);
+  }
+};
 
   const useSuggestion = (text) => {
     setInput(text);
